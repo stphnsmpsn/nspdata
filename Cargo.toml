@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "crates/runner",
+    "crates/bidgely_adapter",
+]
