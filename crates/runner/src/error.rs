@@ -1,15 +1,13 @@
-pub mod auth;
-pub mod feed;
-pub mod session;
-
 #[derive(thiserror::Error, Debug)]
-pub enum BidgelyError {
-    #[error("reqwest error")]
-    Reqwest(#[from] reqwest::Error),
+pub enum Error {
+    #[error("Bidgely Error")]
+    BidgelyError(#[from] bidgely_adapter::BidgelyError),
     #[error("Serde JSON Error")]
     SerdeJson(#[from] serde_json::Error),
     #[error("Quick XML De Error")]
     DeError(#[from] quick_xml::DeError),
-    #[error("Unable to write file")]
+    #[error("IO Error")]
     IoError(#[from] std::io::Error),
+    #[error("Bad Argument: {0}")]
+    BadArgument(String),
 }

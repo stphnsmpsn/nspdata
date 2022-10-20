@@ -1,60 +1,58 @@
-use bidgely_adapter::{SessionResponse, UserAuthResponse};
+use crate::args::{Action, Args};
 use clap::Parser;
+
+pub mod args;
+pub mod convert;
+pub mod download;
+pub mod error;
 
 const BIDGELY_BASE_URL: &'static str = "https://caapi.bidgely.com/v2.0";
 
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    #[arg(short, long)]
-    uid: String,
-}
-
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), error::Error> {
     let args: Args = Args::parse();
-    let user_id = args.uid.as_str();
 
-    let user_auth_response: UserAuthResponse = serde_json::from_str(
-        &reqwest::get(format!(
-            "{BIDGELY_BASE_URL}/user-auth/cipher?user-id={user_id}&pilot-id=40003"
-        ))
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap(),
+    match args.action {
+        Action::Convert => convert::convert(&args)?,
+        Action::Download => download::download(BIDGELY_BASE_URL, &args).await?,
+    }
+
+    let user_id = "your-user-id";
+    let start = 1664593200;
+    let end = 1665413999;
+    let user_auth_response = bidgely_adapter::auth::auth(BIDGELY_BASE_URL, user_id).await?;
+    let session_response =
+        bidgely_adapter::session::session(BIDGELY_BASE_URL, user_auth_response.payload.as_str())
+            .await?;
+    let feed = bidgely_adapter::feed::get_feed(
+        BIDGELY_BASE_URL,
+        user_id,
+        session_response.payload.token_details.access_token.as_str(),
+        start,
+        end,
     )
-    .unwrap();
+    .await?;
 
-    let session = user_auth_response.payload;
+    let interval_blocks: Vec<bidgely_adapter::feed::IntervalBlock> = feed
+        .entry
+        .into_iter()
+        .filter_map(|entry| match entry.content.to_inner() {
+            bidgely_adapter::feed::ContentType::IntervalBlock(e) => Some(e),
+            _ => None,
+        })
+        .collect();
 
-    let session_response: SessionResponse = serde_json::from_str(
-        &reqwest::get(format!(
-            "{BIDGELY_BASE_URL}/web/web-session/{session}?pilotId=40003&clientId=nsp-dashboard"
-        ))
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap(),
-    )
-    .unwrap();
+    let mut days: Vec<u32> = vec![];
 
-    let token = session_response.payload.token_details.access_token;
+    interval_blocks.iter().for_each(|interval_block| {
+        let total = interval_block
+            .interval_reading
+            .iter()
+            .fold(0, |acc, x| acc + x.value);
+        days.push(total)
+    });
 
-    let client = reqwest::Client::new();
-    let xml_data = client.get(format!(
-        "{BIDGELY_BASE_URL}/dashboard/users/{user_id}/gb-download?start=1660694400&end=1665964800&measurement-type=ELECTRIC"
-    ))
-        .header(reqwest::header::CONTENT_TYPE, "application/json;charset=UTF-8")
-        .header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"))
-        .send()
-    .await
-    .unwrap()
-    .text()
-    .await
-    .unwrap();
+    days.iter().for_each(|day| println!("{:?}", day));
 
-    println!("{:?}", xml_data);
+    Ok(())
 }
