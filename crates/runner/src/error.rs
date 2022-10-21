@@ -10,4 +10,6 @@ pub enum Error {
     IoError(#[from] std::io::Error),
     #[error("Bad Argument: {0}")]
     BadArgument(String),
+    #[error("Server Error")]
+    ServerError(#[from] server::error::ServerError),
 }

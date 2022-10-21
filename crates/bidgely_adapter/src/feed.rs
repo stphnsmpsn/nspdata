@@ -1,7 +1,7 @@
-use crate::BidgelyError;
+use crate::{BidgelyError, BIDGELY_BASE_URL};
 use std::fs;
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub struct Feed {
     pub id: String,
@@ -11,7 +11,7 @@ pub struct Feed {
     pub entries: Vec<Entry>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Entry {
     pub id: String,
     pub link: Vec<Link>,
@@ -21,7 +21,7 @@ pub struct Entry {
     pub updated: String,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Link {
     pub href: String,
     pub rel: String,
@@ -29,10 +29,16 @@ pub struct Link {
     pub kind: String,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Content {
     #[serde(rename(deserialize = "$value"))]
     inner: ContentType,
+}
+
+impl From<ContentType> for Content {
+    fn from(inner: ContentType) -> Self {
+        Self { inner }
+    }
 }
 
 impl Content {
@@ -49,7 +55,13 @@ impl std::ops::Deref for Content {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+impl std::ops::DerefMut for Content {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub enum ContentType {
     LocalTimeParameters(LocalTimeParameters),
     UsagePoint(UsagePoint),
@@ -60,7 +72,7 @@ pub enum ContentType {
     Other,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub struct LocalTimeParameters {
     pub dst_end_rule: String,
@@ -69,18 +81,18 @@ pub struct LocalTimeParameters {
     pub tz_offset: String,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all(deserialize = "PascalCase"))]
 pub struct UsagePoint {
     pub service_category: ServiceCategory,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct ServiceCategory {
     pub kind: u32,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub struct ReadingType {
     pub accumulation_behaviour: u32,
@@ -95,20 +107,20 @@ pub struct ReadingType {
     pub time_attribute: u32,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct IntervalBlock {
     pub interval: Interval,
     #[serde(rename = "IntervalReading")]
     pub interval_reading: Vec<IntervalReading>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Interval {
     pub duration: u64,
     pub start: u64,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct IntervalReading {
     #[serde(rename = "ReadingQuality")]
     pub reading_quality: ReadingQuality,
@@ -117,20 +129,19 @@ pub struct IntervalReading {
     pub value: u32,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct ReadingQuality {
     pub quality: u32, // todo: pub enum ReadingQuality
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
 pub struct TimePeriod {
-    pub duration: u32,
-    pub start: u32,
+    pub duration: u64,
+    pub start: u64,
 }
 
 pub async fn download_and_save_feed_xml(
-    base_url: &str,
     user_id: &str,
     token: &str,
     start: u64,
@@ -139,7 +150,7 @@ pub async fn download_and_save_feed_xml(
 ) -> Result<(), BidgelyError> {
     let client = reqwest::Client::new();
     let xml_data = client.get(format!(
-        "{base_url}/dashboard/users/{user_id}/gb-download?start={start}&end={end}&measurement-type=ELECTRIC"
+        "{BIDGELY_BASE_URL}/dashboard/users/{user_id}/gb-download?start={start}&end={end}&measurement-type=ELECTRIC"
     ))
         .header(reqwest::header::CONTENT_TYPE, "application/json;charset=UTF-8")
         .header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"))
@@ -165,7 +176,6 @@ pub async fn download_and_save_feed_xml(
 }
 
 pub async fn get_feed(
-    base_url: &str,
     user_id: &str,
     token: &str,
     start: u64,
@@ -173,7 +183,7 @@ pub async fn get_feed(
 ) -> Result<Feed, BidgelyError> {
     let client = reqwest::Client::new();
     let xml_data = client.get(format!(
-        "{base_url}/dashboard/users/{user_id}/gb-download?start={start}&end={end}&measurement-type=ELECTRIC"
+        "{BIDGELY_BASE_URL}/dashboard/users/{user_id}/gb-download?start={start}&end={end}&measurement-type=ELECTRIC"
     ))
         .header(reqwest::header::CONTENT_TYPE, "application/json;charset=UTF-8")
         .header(reqwest::header::AUTHORIZATION, format!("Bearer {token}"))

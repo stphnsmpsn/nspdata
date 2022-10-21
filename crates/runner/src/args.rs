@@ -2,6 +2,7 @@
 pub enum Action {
     Convert,
     Download,
+    RunServer,
 }
 
 #[derive(clap::Parser, Debug)]

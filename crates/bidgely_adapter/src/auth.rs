@@ -1,4 +1,4 @@
-use crate::BidgelyError;
+use crate::{BidgelyError, BIDGELY_BASE_URL};
 
 #[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
@@ -8,10 +8,10 @@ pub struct UserAuthResponse {
     pub error: Option<String>,
 }
 
-pub async fn auth(base_url: &str, user_id: &str) -> Result<UserAuthResponse, BidgelyError> {
+pub async fn auth(user_id: &str) -> Result<UserAuthResponse, BidgelyError> {
     Ok(serde_json::from_str(
         &reqwest::get(format!(
-            "{base_url}/user-auth/cipher?user-id={user_id}&pilot-id=40003"
+            "{BIDGELY_BASE_URL}/user-auth/cipher?user-id={user_id}&pilot-id=40003"
         ))
         .await?
         .text()

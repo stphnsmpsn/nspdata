@@ -1,4 +1,4 @@
-use crate::BidgelyError;
+use crate::{BidgelyError, BIDGELY_BASE_URL};
 
 #[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all(deserialize = "camelCase"))]
@@ -105,10 +105,10 @@ pub struct PremiseAddress {
     pub context: Option<String>,
 }
 
-pub async fn session(base_url: &str, session: &str) -> Result<SessionResponse, BidgelyError> {
+pub async fn session(session: &str) -> Result<SessionResponse, BidgelyError> {
     Ok(serde_json::from_str(
         &reqwest::get(format!(
-            "{base_url}/web/web-session/{session}?pilotId=40003&clientId=nsp-dashboard"
+            "{BIDGELY_BASE_URL}/web/web-session/{session}?pilotId=40003&clientId=nsp-dashboard"
         ))
         .await?
         .text()

@@ -2,6 +2,8 @@ pub mod auth;
 pub mod feed;
 pub mod session;
 
+pub(crate) const BIDGELY_BASE_URL: &'static str = "https://caapi.bidgely.com/v2.0";
+
 #[derive(thiserror::Error, Debug)]
 pub enum BidgelyError {
     #[error("reqwest error")]
